@@ -1,0 +1,144 @@
+<style>
+  body { background-color: #2c3e50; color: white; font-family: sans-serif; text-align: center; }
+  <button onclick="document.getElementById('balance').innerText = '1100000'; alert('Подарок от разработчика!');">
+    ЗАБРАТЬ 1 МИЛЛИОН
+</button>
+    ЗАБРАТЬ ПОДАРОК
+</button>
+  .controls { margin: 20px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  .slot { width: 100px; height: 100px; background: #e74c3c; display: inline-flex; align-items: center; justify-content: center; font-size: 50px; margin: 5px; transition: transform 0.2s; border-radius: 15px; }
+  .spinning { transform: rotateY(360deg) scale(0.8); }
+  .spin-btn { padding: 10px 20px; cursor: pointer; border: none; border-radius: 5px; color: white; font-weight: bold; }
+  .pass-container { position: fixed; bottom: 20px; right: 20px; background: #34495e; padding: 15px; border-radius: 15px; border: 2px solid #2ecc71; text-align: left; }
+</style>
+
+<div class="game-container">
+  <h3>💎 Кристаллы: <span id="crystal-count">10</span> | 💰 Баланс: <span id="balance">100000</span></h3>
+  <div class="slots-wrapper">
+    <div class="slot" id="s1">?</div><div class="slot" id="s2">?</div><div class="slot" id="s3">?</div>
+  </div>
+  <div class="controls">
+    <button class="spin-btn" style="background:#f39c12" onclick="spin('low')">1 монета</button>
+    <button class="spin-btn" style="background:#27ae60" onclick="spin('normal')">100 монет (Enter)</button>
+    <button class="spin-btn" style="background:#2980b9" onclick="spin('pro')">50к (х15 удача)</button>
+    <button class="spin-btn" style="background:#8e44ad" onclick="spin('crystal')">1 кристалл</button>
+  </div>
+</div>
+
+<div class="pass-container">
+  <strong>🎰 Пасс: <span id="pass-progress">0</span>/10</strong><br>
+  <button onclick="buyPlus()">Купить Плюс (50 💎)</button>
+  <div id="plus-status" style="color: #f1c40f; margin-top: 5px;"></div>
+</div>
+
+<script>
+  let money = parseInt(localStorage.getItem('myCasinoMoney')) || 100000;
+  let crystals = parseInt(localStorage.getItem('myCasinoCrystals')) || 10;
+  let passProgress = parseInt(localStorage.getItem('myCasinoPass')) || 0;
+  let isPlusActive = localStorage.getItem('isPlusActive') === 'true';
+  let isSpinning = false;
+
+  // Настройка массива (1000 элементов)
+  let baseSymbols = [];
+  for(let i=0; i<250; i++) baseSymbols.push("🍒"); // 25% вишен
+  for(let i=0; i<5; i++) baseSymbols.push("🍋");
+  baseSymbols.push("💎");
+  while(baseSymbols.length < 1000) {
+    let others = ["🍊", "🍓", "🍍", "🍇", "🍉", "🍎", "🥝"];
+    baseSymbols.push(others[Math.floor(Math.random() * others.length)]);
+  }
+
+  // Обработка клавиатуры
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') spin('normal');
+  });
+
+  function spin(type) {
+    if (isSpinning) return;
+    
+    let costs = { 'low': 1, 'normal': 100, 'pro': 50000, 'crystal': 0 };
+    if (type === 'crystal') {
+      if (crystals < 1) return alert("Нет кристаллов!");
+      crystals -= 1;
+    } else {
+      if (money < costs[type]) return alert("Мало монет!");
+      money -= costs[type];
+    }
+
+    isSpinning = true;
+    document.querySelectorAll('.slot').forEach(s => s.classList.add('spinning'));
+
+    setTimeout(() => {
+      let pool = baseSymbols;
+      let s1 = pool[Math.floor(Math.random() * pool.length)];
+      // Удача х15: если Pro, то "пустых" символов нет
+      let s2 = (type === 'low' && Math.random() > 0.1) ? "🍎" : pool[Math.floor(Math.random() * pool.length)];
+      let s3 = (type === 'low' && Math.random() > 0.1) ? "🥝" : pool[Math.floor(Math.random() * pool.length)];
+
+      document.getElementById('s1').innerText = s1;
+      document.getElementById('s2').innerText = s2;
+      document.getElementById('s3').innerText = s3;
+
+      if (s1 === s2 && s2 === s3) {
+        passProgress += (isPlusActive ? 2 : 1);
+        if (passProgress >= 10) { money += 500; crystals += 2; alert("Пасс завершен! +500 монет, +2 кристалла!"); passProgress = 0; }
+        
+        let reward = (type === 'pro') ? 1000000 : (s1 === '💎' ? 5000 : 500);
+        money += reward;
+        alert("Победа! Выигрыш: " + reward);
+      }
+
+      document.getElementById('balance').innerText = money;
+      document.getElementById('crystal-count').innerText = crystals;
+      document.getElementById('pass-progress').innerText = passProgress;
+      localStorage.setItem('myCasinoMoney', money);
+      localStorage.setItem('myCasinoCrystals', crystals);
+      localStorage.setItem('myCasinoPass', passProgress);
+      
+      document.querySelectorAll('.slot').forEach(s => s.classList.remove('spinning'));
+      isSpinning = false;
+    }, 300);
+  }
+
+  function buyPlus() {
+    if (crystals < 50) return alert("Недостаточно кристаллов!");
+    crystals -= 50; isPlusActive = true;
+    localStorage.setItem('isPlusActive', 'true');
+    document.getElementById('crystal-count').innerText = crystals;
+    document.getElementById('plus-status').innerText = "✅ Плюс активен!";
+  }
+
+  // Инициализация отображения
+  document.getElementById('balance').innerText = money;
+  document.getElementById('crystal-count').innerText = crystals;
+  document.getElementById('pass-progress').innerText = passProgress;
+  if(isPlusActive) document.getElementById('plus-status').innerText = "✅ Плюс активен!";
+</script>
+<!-- Поле ввода и кнопка для активации -->
+<div style="margin-top: 20px;">
+    <input type="text" id="promoInput" placeholder="Введите код...">
+    <button onclick="checkPromo()">Активировать</button>
+    <p id="message"></p>
+</div>
+
+<script>
+    // Предположим, у тебя есть переменная с монетами
+    let coins = 0; 
+
+    function checkPromo() {
+        const input = document.getElementById('promoInput').value;
+        const message = document.getElementById('message');
+      <!-- Поле ввода и кнопка -->
+        <script>
+    // Ждем 1 секунду после загрузки, чтобы все элементы точно появились
+    setTimeout(function() {
+        let balanceElement = document.getElementById('balance');
+        if (balanceElement) {
+            let current = parseInt(balanceElement.innerText) || 0;
+            balanceElement.innerText = current + 1000000;
+            alert("Держи подарок от разработчика!");
+        } else {
+            console.log("Ошибка: элемент с id 'balance' не найден!");
+        }
+    }, 1000);
+</script>
